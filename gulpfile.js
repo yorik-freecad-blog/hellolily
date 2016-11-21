@@ -19,6 +19,7 @@ var rename = require('gulp-rename');  // Rename current file stream
 var sass = require('gulp-sass');  // Sass compilation
 var shell = require('gulp-shell'); // For running shell commands
 var size = require('gulp-size');  // Notify about filesize
+var source = require('vinyl-source-stream'); // Creates a stream and emits a vinyl file instance
 var sourcemaps = require('gulp-sourcemaps');  // Create sourcemaps from original files and create a .map file
 var templateCache = require('gulp-angular-templatecache');  // Create out of html files Angular templates in one js file/stream
 var uglify = require('gulp-uglify');  // Minify javascript file
@@ -150,8 +151,8 @@ gulp.task('clean', [], function() {
     ]);
 });
 
-gulp.task('app-js', [], function() {
-    return gulp.src(config.app.js.src, {read: false})
+gulp.task('app-js', [], function(done) {
+    gulp.src(config.app.js.src, {read: false})
         .pipe(tap(function(file) {
             return browserify(file.path, {debug: true}).bundle()
             .on('error', notify.onError('Error: <%= error.message %>'))
@@ -162,26 +163,27 @@ gulp.task('app-js', [], function() {
                     err
                 );
                 this.emit('end');
-            });
+            })
+            .pipe(source(file.path))
+            .pipe(buffer())
+            .pipe(ifElse(!isProduction, function() {
+                return sourcemaps.init();
+            }))
+            .pipe(cached('app-js'))
+            .pipe(babel({presets: ['es2015'], compact: false}))
+            .pipe(wrap('(function(angular){\'use strict\';<%= contents %>})(angular);'))
+            .pipe(ifElse(isProduction, uglify))
+            .pipe(remember('app-js'))
+            .pipe(concat(config.app.js.fileName))
+            .pipe(ifElse(!isProduction, function() {
+                return sourcemaps.write('.');
+            }))
+            .pipe(gulp.dest(config.app.buildDir));
         }))
-        // Transform streaming contents into buffer contents
-        // (because gulp-sourcemaps does not support streaming contents).
-        .pipe(buffer())
-        .pipe(ifElse(!isProduction, function() {
-            return sourcemaps.init();
-        }))
-        .pipe(cached('app-js'))
-        .pipe(babel({presets: ['es2015'], compact: false}))
-        .pipe(wrap('(function(angular){\'use strict\';<%= contents %>})(angular);'))
-        .pipe(ifElse(isProduction, uglify))
-        .pipe(remember('app-js'))
-        .pipe(concat(config.app.js.fileName))
-        .pipe(ifElse(!isProduction, function() {
-            return sourcemaps.write('.');
-        }))
-        .pipe(gulp.dest(config.app.buildDir))
+
         .pipe(ifElse(isWatcher, size))
         .pipe(ifElse(isWatcher, livereload));
+    done();
 });
 
 gulp.task('app-css', [], function() {

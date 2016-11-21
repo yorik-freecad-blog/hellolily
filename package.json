@@ -51,6 +51,7 @@
     "gulp-util": "3.0.7",
     "gulp-watch": "4.3.10",
     "gulp-wrap": "0.13.0",
-    "markdown-styleguide-generator": "2.0.4"
+    "markdown-styleguide-generator": "2.0.4",
+    "vinyl-source-stream": "^1.1.0"
   }
 }
