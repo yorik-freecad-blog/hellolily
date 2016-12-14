@@ -47,7 +47,19 @@ class LilyUserSerializer(WritableNestedSerializer):
         if self.instance.picture is validated_data.get('picture'):
             validated_data['picture'] = None
 
-        return super(LilyUserSerializer, self).update(instance, validated_data)
+        # Remove all teams from a user instance to add them after the serializer.
+        for team in self.instance.teams.all():
+            self.instance.teams.remove(team)
+
+        teams_validated_data = validated_data.pop('teams', {})
+
+        user = super(LilyUserSerializer, self).update(instance, validated_data)
+
+        # Add teams to user.
+        for team_validated_data in teams_validated_data:
+            user.teams.add(team_validated_data)
+
+        return user
 
     def validate_picture(self, value):
         if value and value.size > settings.MAX_AVATAR_SIZE:
