@@ -38,11 +38,13 @@ function HLSearch($injector, Tag) {
         var i;
 
         // Exclude tags already selected.
-        for (i = 0; i < tags.length; i++) {
-            if (i === 0) {
-                exclude += 'NOT name_flat:' + tags[i].name;
-            } else {
-                exclude += ' AND NOT name_flat:' + tags[i].name;
+        if (tags) {
+            for (i = 0; i < tags.length; i++) {
+                if (i === 0) {
+                    exclude += 'NOT name_flat:' + tags[i].name;
+                } else {
+                    exclude += ' AND NOT name_flat:' + tags[i].name;
+                }
             }
         }
 

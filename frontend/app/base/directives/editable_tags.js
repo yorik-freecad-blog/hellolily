@@ -6,6 +6,7 @@ function editableTags() {
         scope: {
             viewModel: '=',
             type: '@',
+            obj: '=',
         },
         templateUrl: 'base/directives/editable_tags.html',
         controller: EditableTagsController,
@@ -28,7 +29,11 @@ function EditableTagsController($timeout, HLSearch, HLUtils) {
     /////
 
     function activate() {
-        vm.object = vm.viewModel[vm.type.toLowerCase()];
+        if (vm.obj) {
+            vm.object = vm.obj;
+        } else {
+            vm.object = vm.viewModel[vm.type.toLowerCase()];
+        }
     }
 
     function refreshTags(query) {
@@ -49,7 +54,7 @@ function EditableTagsController($timeout, HLSearch, HLUtils) {
             id: vm.object.id,
         };
 
-        var form = '[name="vm.tagForm"]';
+        var form = '[id="tagForm' + vm.object.id + '"]';
 
         HLUtils.blockUI(form, true);
 
@@ -57,10 +62,12 @@ function EditableTagsController($timeout, HLSearch, HLUtils) {
             tagIds.push(tag.id);
         }
 
-        removedTags = vm.object.tags.filter(tag => tagIds.indexOf(tag.id) === -1);
+        if (vm.object.tags) {
+            removedTags = vm.object.tags.filter(tag => tagIds.indexOf(tag.id) === -1);
 
-        for (let tag of removedTags) {
-            tag.is_deleted = true;
+            for (let tag of removedTags) {
+                tag.is_deleted = true;
+            }
         }
 
         args.tags = $data.concat(removedTags);
@@ -72,7 +79,7 @@ function EditableTagsController($timeout, HLSearch, HLUtils) {
             // Just setting the value doesn't update the values model properly.
             // So use $timeout so it gets applied in the next digest cycle.
             $timeout(function() {
-                vm.viewModel[vm.type.toLowerCase()].tags = response.tags;
+                vm.object.tags = response.tags;
             });
         });
     }

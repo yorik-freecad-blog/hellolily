@@ -10,8 +10,9 @@ function unassignedDealsDirective() {
     };
 }
 
-UnassignedDealsController.$inject = ['$http', '$scope', '$state', 'Deal', 'HLFilters', 'HLUtils', 'LocalStorage'];
-function UnassignedDealsController($http, $scope, $state, Deal, HLFilters, HLUtils, LocalStorage) {
+UnassignedDealsController.$inject = ['$http', '$scope', '$state', 'Deal', 'HLFilters', 'HLUtils', 'LocalStorage',
+    'HLResource'];
+function UnassignedDealsController($http, $scope, $state, Deal, HLFilters, HLUtils, LocalStorage, HLResource) {
     var vm = this;
 
     vm.storageName = 'unassignedDealsWidget';
@@ -28,6 +29,7 @@ function UnassignedDealsController($http, $scope, $state, Deal, HLFilters, HLUti
 
     vm.assignToMe = assignToMe;
     vm.updateTable = updateTable;
+    vm.updateModel = updateModel;
 
     activate();
 
@@ -91,5 +93,14 @@ function UnassignedDealsController($http, $scope, $state, Deal, HLFilters, HLUti
             updateTable();
             vm.storage.put('order', vm.table.order);
         });
+    }
+
+    function updateModel(data, field) {
+        var args = HLResource.createArgs(data, field);
+        var patchPromise;
+
+        patchPromise = HLResource.patch('Deal', args).$promise;
+
+        return patchPromise;
     }
 }
