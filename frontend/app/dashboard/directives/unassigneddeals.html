@@ -24,14 +24,10 @@
                     <th></th>
                 </tr>
             </thead>
-            <tbody>
-                <tr ng-hide="vm.table.items.length">
-                    <td colspan="6">There are no unassigned deals...</td>
-                </tr>
-                <tr ng-repeat="deal in vm.table.items">
+            <tbody ng-repeat="deal in vm.table.items">
+                <tr>
                     <td>
                         <a ui-sref="base.deals.detail({ id: deal.id })">{{ deal.name }}</a>
-                        <editable-tags view-model="vm" obj="deal" type="Deal"></editable-tags>
                     </td>
                     <td>
                         <a ui-sref="base.contacts.detail({ id: deal.contact.id })" ng-if="::deal.contact">{{ ::deal.contact.full_name }}</a>
@@ -52,6 +48,16 @@
                     </td>
                     <td><date date="deal.next_step_date" show-time="true"></date></td>
                     <td><a ng-click="vm.assignToMe(deal)"><i class="fa fa-anchor"></i> Assign to me</a></td>
+                </tr>
+                <tr>
+                    <td colspan="6">
+                        <editable-tags view-model="vm" obj="deal" type="Deal"></editable-tags>
+                    </td>
+                </tr>
+            </tbody>
+            <tbody>
+                <tr ng-hide="vm.table.items.length">
+                    <td colspan="6">There are no unassigned deals...</td>
                 </tr>
             </tbody>
         </table>
