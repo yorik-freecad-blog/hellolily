@@ -64,6 +64,10 @@ function HLMessages() {
                 userAssignTitle: 'Assign %(user)s to teams',
                 shareAccountTitle: 'Yes, let me share this email account',
             },
+            requestEmail: {
+                title: 'Connect email account.',
+                confirmButtonText: 'Yes, add accoun!',
+            },
         },
         tooltips: {
             modEnter: {

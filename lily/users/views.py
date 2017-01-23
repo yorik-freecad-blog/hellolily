@@ -219,12 +219,15 @@ class LoginView(View):
         Check if the user wants to be remembered and return the default login view.
         """
         if request.user.is_authenticated():
+            # User visiting login screen but is already logged in or the user logs out.
             return redirect(reverse_lazy('base_view'))
 
         if request.method == 'POST':
-            # If not using 'remember me' feature use default expiration time.
+            # User logs in.
             if not request.POST.get('remember_me', False):
+                # The user wants to be remembered at the next login, so disable session expiration time.
                 request.session.set_expiry(None)
+
         return login(
             request,
             template_name=self.template_name,

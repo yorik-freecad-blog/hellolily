@@ -110,6 +110,7 @@ class LilyUser(TenantMixin, PermissionsMixin, AbstractBaseUser):
                     'Unselect this instead of deleting accounts.')
     )
     date_joined = models.DateTimeField(_('date joined'), default=timezone.now)
+    connected_or_dismissed = models.BooleanField(default=False)
     teams = models.ManyToManyField(
         Team,
         verbose_name=_('Lily teams'),
