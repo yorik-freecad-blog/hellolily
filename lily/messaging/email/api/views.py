@@ -21,6 +21,7 @@ from ..models.models import (EmailLabel, EmailAccount, EmailMessage, EmailTempla
                              TemplateVariable)
 from ..tasks import (trash_email_message, delete_email_message, toggle_read_email_message,
                      add_and_remove_labels_for_message, toggle_star_email_message, toggle_spam_email_message)
+from ..utils import get_filtered_message
 
 
 logger = logging.getLogger(__name__)
@@ -53,13 +54,17 @@ class SharedEmailConfigViewSet(viewsets.ModelViewSet):
         email_account_id = self.request.data['email_account']
         try:
             shared_email_setting = self.get_queryset().get(email_account_id=email_account_id)
-            shared_email_setting.is_hidden = 'is_hidden' in self.request.data
-            shared_email_setting.save()
         except SharedEmailConfig.DoesNotExist:
             serializer.save(tenant_id=self.request.user.tenant_id, user=self.request.user)
+        else:
+            if 'is_hidden' in self.request.data:
+                shared_email_setting.is_hidden = self.request.data.get('is_hidden')
+                shared_email_setting.save()
 
     def perform_update(self, serializer):
-        is_hidden = 'is_hidden' in self.request.data
+        if 'is_hidden' in self.request.data:
+            is_hidden = self.request.data.get('is_hidden')
+
         serializer.save(tenant_id=self.request.user.tenant_id, user=self.request.user, is_hidden=is_hidden)
 
     def get_queryset(self):
@@ -71,7 +76,7 @@ class EmailAccountViewSet(mixins.DestroyModelMixin,
                           mixins.UpdateModelMixin,
                           viewsets.ReadOnlyModelViewSet):
 
-    queryset = EmailLabel.objects.all()
+    queryset = EmailAccount.objects.all()
     serializer_class = EmailAccountSerializer
 
     # Set all filter backends that this viewset uses.
@@ -102,7 +107,6 @@ class EmailAccountViewSet(mixins.DestroyModelMixin,
 
         # Hide when we do not want to follow an email_account.
         email_account_exclude_list = SharedEmailConfig.objects.filter(
-            user=request.user,
             is_hidden=True
         ).values_list('email_account_id', flat=True)
 
@@ -175,55 +179,19 @@ class EmailMessageViewSet(mixins.RetrieveModelMixin,
         email_messages = EmailMessage.objects.filter(account__tenant=user.tenant)
 
         # Get all email accounts.
-        email_accounts = EmailAccount.objects.filter(tenant=user.tenant).distinct('id')
+        email_accounts = EmailAccount.objects.filter(tenant=user.tenant, is_deleted=False).distinct('id')
 
         filtered_queryset = []
 
         for email_message in email_messages:
             email_account = email_accounts.get(pk=email_message.account.id)
 
-            filtered_message = self.get_filtered_message(email_message, email_account)
+            filtered_message = get_filtered_message(email_message, email_account)
 
             if filtered_message:
                 filtered_queryset.append(filtered_message)
 
-        email_messages = filtered_queryset
-
-        return email_messages
-
-    def get_filtered_message(self, email_message, email_account):
-        """
-        Return the email message based on the privacy settings of the given email account.
-
-        Args:
-            email_message (EmailMessage): The email message that will be filtered.
-            email_account (EmailAccount): The email account the privacy settings are checked for.
-
-        Returns:
-            email_message: The message as the current user is allowed to see it.
-        """
-
-        is_owner = email_account.owner == self.request.user
-        shared_with = (self.request.user.id in email_account.shared_with_users.values_list('id', flat=True))
-        # Check if the user has full access to the email messages.
-        # This means the user is either the owner or the email account has been shared with him/her.
-        has_full_access = (is_owner or shared_with)
-
-        if (email_account.privacy == EmailAccount.METADATA and not has_full_access):
-            # If the email account is set to metadata only, just set these fields.
-            return {
-                'sender': email_message.sender,
-                'subject': email_message.subject,
-                'received_by': email_message.received_by,
-                'received_by_cc': email_message.received_by_cc,
-                'sent_date': email_message.sent_date,
-                'account': email_message.account,
-            }
-        elif email_account.privacy == EmailAccount.PRIVATE and not has_full_access:
-            # Private email (account), so don't return a message.
-            return None
-        else:
-            return email_message
+        return filtered_queryset
 
     def perform_update(self, serializer):
         """

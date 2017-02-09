@@ -21,7 +21,7 @@ from lily.search.scan_search import ModelMappings
 from lily.search.indexing import update_in_index
 
 from .decorators import get_safe_template
-from .models.models import EmailAttachment, EmailMessage
+from .models.models import EmailAttachment, EmailMessage, EmailAccount
 from .sanitize import sanitize_html_email
 
 _EMAIL_PARAMETER_DICT = {}
@@ -511,3 +511,33 @@ def reindex_email_message(instance):
     mapping = ModelMappings.model_to_mappings.get(type(instance))
     if mapping:
         update_in_index(instance, mapping)
+
+
+def get_filtered_message(self, email_message, email_account, user):
+    # Check if the user has full access to the email messages.
+    # This means the user is either the owner or the email account has been shared with him/her.
+    has_full_access = self.has_full_access(email_account, user)
+
+    # If the email account is set to metadata only, just set these fields.
+    if (email_account.privacy == EmailAccount.METADATA and not has_full_access):
+        email_message = {
+            'sender': email_message.sender,
+            'subject': email_message.subject,
+            'received_by': email_message.received_by.all(),
+            'received_by_cc': email_message.received_by_cc.all(),
+            'sent_date': email_message.sent_date,
+            'account': email_message.account,
+        }
+        return email_message
+    elif email_account.privacy == EmailAccount.PRIVATE and not has_full_access:
+        # Private email (account), so don't return a message.
+        return None
+    else:
+        return email_message
+
+
+def has_full_access(self, email_account, user):
+    is_owner = email_account.owner == user
+    shared_with = (user.id in email_account.shared_with_users.values_list('id', flat=True))
+
+    return (is_owner or shared_with)

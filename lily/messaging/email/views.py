@@ -62,13 +62,8 @@ FLOW = OAuth2WebServerFlow(
 
 class SetupEmailAuth(LoginRequiredMixin, View):
     def get(self, request):
-        is_public = request.GET.get('is_public', 0)
-        only_new = request.GET.get('only_new', 0)
-
         state = b64encode(anyjson.serialize({
             'token': generate_token(settings.SECRET_KEY, request.user.pk),
-            'is_public': is_public,
-            'only_new': only_new,
         }))
 
         authorize_url = FLOW.step1_get_authorize_url(state=state)
@@ -105,35 +100,23 @@ class OAuth2Callback(LoginRequiredMixin, View):
         # Create account based on email address.
         account, created = EmailAccount.objects.get_or_create(
             owner=request.user,
-            email_address=profile.get('emailAddress')
+            email_address=profile.get('emailAddress'),
         )
 
         # Store credentials based on new email account.
         storage = Storage(GmailCredentialsModel, 'id', account, 'credentials')
         storage.put(credentials)
 
-        # Set account as authorized.
-        account.is_authorized = True
         account.is_deleted = False
-
-        account.label = account.label or account.email_address
-        account.from_name = account.from_name or ' '.join(account.email_address.split('@')[0].split('.')).title()
-
-        set_to_public = bool(int(state.get('is_public')))
-        if set_to_public:
-            account.privacy = EmailAccount.PUBLIC
-
-        only_sync_new_mails = bool(int(state.get('only_new')))
-        if only_sync_new_mails and created:
-            # Setting it before the first sync means it will only fetch changes starting now.
-            account.history_id = profile.get('historyId')
-            account.full_sync_finished = True
-
         account.save()
 
         post_intercom_event(event_name='email-account-added', user_id=request.user.id)
 
-        return HttpResponseRedirect('/#/preferences/emailaccounts/edit/%s' % account.pk)
+        if request.user.info and not request.user.info.email_account_status:
+            # First time setup, so we want a different view.
+            return HttpResponseRedirect('/#preferences/emailaccounts/setup/%s' % account.pk)
+        else:
+            return HttpResponseRedirect('/#/preferences/emailaccounts/edit/%s' % account.pk)
 
 
 class EmailAccountUpdateView(LoginRequiredMixin, SuccessMessageMixin, FormActionMixin, StaticContextMixin, UpdateView):

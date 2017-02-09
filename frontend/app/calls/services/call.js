@@ -1,7 +1,7 @@
-angular.module('app.calls').factory('Call', Call);
+angular.module('app.calls').factory('Call', SharedEmailConfig);
 
-Call.$inject = ['$resource'];
-function Call($resource) {
+SharedEmailConfig.$inject = ['$resource'];
+function SharedEmailConfig($resource) {
     var _call = $resource(
         '/api/calls/:id/',
         null,

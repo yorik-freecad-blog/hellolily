@@ -512,6 +512,7 @@ def es_url_to_dict(url):
             'http_auth': '%s:%s' % (parse.username, parse.password)}
     return tuple(sorted(host.items()))
 
+
 ES_PROVIDER_ENV = os.environ.get('ES_PROVIDER_ENV', 'ES_DEV_URL')
 ES_URLS = [es_url_to_dict(os.environ.get(ES_PROVIDER_ENV, 'http://es:9200'))]
 

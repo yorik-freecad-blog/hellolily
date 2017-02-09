@@ -13,7 +13,7 @@ from timezone_field import TimeZoneField
 from lily.settings.settings import LANGUAGES
 from lily.tenant.factories import TenantFactory
 
-from .models import Team, LilyUser
+from .models import Team, LilyUser, UserInfo
 
 
 faker = Factory.create('nl_NL')
@@ -25,6 +25,13 @@ class TeamFactory(DjangoModelFactory):
 
     class Meta:
         model = Team
+
+
+class UserInfo(DjangoModelFactory):
+    email_account_status = FuzzyChoice(dict(UserInfo.STATUS_CHOICES).keys())
+
+    class Meta:
+        model = UserInfo
 
 
 class LilyUserFactory(DjangoModelFactory):
@@ -40,6 +47,8 @@ class LilyUserFactory(DjangoModelFactory):
 
     language = FuzzyChoice(dict(LANGUAGES).keys())
     timezone = FuzzyChoice(dict(TimeZoneField.CHOICES).values())
+
+    info = SubFactory(UserInfo)
 
     @post_generation
     def teams(self, create, extracted, **kwargs):
